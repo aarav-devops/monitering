@@ -1,0 +1,203 @@
+# 🚀 Kubernetes Monitoring Stack Setup
+
+A complete production-ready monitoring solution using Prometheus, Grafana, and AlertManager via Helm.
+
+## 📋 Prerequisites
+
+- Kubernetes cluster (EKS, GKE, AKS, or local)
+- `kubectl` configured and connected to your cluster
+- Sufficient cluster resources (minimum 4GB RAM recommended)
+
+---
+
+## 🔧 Step 1: Install Helm
+
+Helm is the package manager for Kubernetes that we'll use to deploy our monitoring stack.
+
+```bash
+# Install Helm 3
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+```
+
+### Verify Installation
+
+```bash
+# Check Helm version
+helm version
+```
+
+**Expected Output:**
+```
+version.BuildInfo{Version:"v3.x.x", GitCommit:"...", GitTreeState:"clean", GoVersion:"go1.x.x"}
+```
+
+---
+
+## 📊 Step 2: Deploy Production Monitoring Stack
+
+This setup includes the complete observability stack used in production environments:
+
+- **Prometheus** - Metrics collection and storage
+- **Grafana** - Visualization and dashboards  
+- **AlertManager** - Alert routing and management
+- **Node Exporter** - System metrics
+- **kube-state-metrics** - Kubernetes cluster metrics
+
+### Add Prometheus Community Repository
+
+```bash
+# Add the official Prometheus Helm repository
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+
+# Update your local Helm repositories
+helm repo update
+```
+
+### Install the Complete Stack
+
+```bash
+# Deploy the kube-prometheus-stack (all-in-one solution)
+helm install monitoring prometheus-community/kube-prometheus-stack
+```
+
+---
+
+## ✅ Verification & Access
+
+### Check Deployment Status
+
+```bash
+# View all monitoring pods
+kubectl get pods -l "release=monitoring"
+
+# Check services
+kubectl get svc -l "release=monitoring"
+```
+
+### Access Grafana Dashboard
+
+```bash
+# Port forward to access Grafana locally
+kubectl port-forward service/monitoring-grafana 3000:80
+```
+
+**Default Credentials:**
+- **Username:** `admin`
+- **Password:** `prom-operator` (or retrieve with: `kubectl get secret monitoring-grafana -o jsonpath="{.data.admin-password}" | base64 --decode`)
+
+**Access URL:** http://localhost:3000
+
+### Access Prometheus
+
+```bash
+# Port forward to access Prometheus
+kubectl port-forward service/monitoring-kube-prometheus-prometheus 9090:9090
+```
+
+**Access URL:** http://localhost:9090
+
+---
+
+## 🎯 What You Get Out of the Box
+
+### Pre-configured Dashboards
+- **Kubernetes Cluster Overview** - Resource usage, pod status, node health
+- **Node Metrics** - CPU, memory, disk, network per node
+- **Pod Monitoring** - Container resource usage and performance
+- **Persistent Volume Usage** - Storage monitoring
+- **Network Policies** - Traffic flow and security
+
+### Alert Rules
+- High CPU/Memory usage
+- Pod crash loops
+- Node unreachable
+- Persistent volume space alerts
+- Kubernetes API server issues
+
+### Exporters Included
+- Node Exporter (system metrics)
+- kube-state-metrics (Kubernetes objects)
+- cAdvisor (container metrics)
+- CoreDNS metrics
+- etcd metrics (if accessible)
+
+---
+
+## 🔧 Customization
+
+### Custom Values File
+
+Create a `values.yaml` file to customize your deployment:
+
+```yaml
+# values.yaml
+grafana:
+  adminPassword: "your-secure-password"
+  persistence:
+    enabled: true
+    size: 10Gi
+
+prometheus:
+  prometheusSpec:
+    retention: 30d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          resources:
+            requests:
+              storage: 50Gi
+```
+
+Apply custom configuration:
+```bash
+helm upgrade monitoring prometheus-community/kube-prometheus-stack -f values.yaml
+```
+
+---
+
+## 🛠️ Troubleshooting
+
+### Common Issues
+
+**Pods stuck in Pending state:**
+```bash
+# Check node resources
+kubectl describe nodes
+kubectl top nodes
+```
+
+**Can't access Grafana:**
+```bash
+# Check Grafana pod logs
+kubectl logs -l "app.kubernetes.io/name=grafana"
+```
+
+**Missing metrics:**
+```bash
+# Verify Prometheus targets
+# Access Prometheus UI → Status → Targets
+```
+
+---
+
+## 🚀 Production Considerations
+
+- **Persistent Storage:** Configure persistent volumes for Grafana and Prometheus
+- **Resource Limits:** Set appropriate CPU/memory limits based on your cluster size
+- **High Availability:** Consider running multiple Prometheus replicas
+- **Security:** Change default passwords and configure proper RBAC
+- **Alerting:** Configure AlertManager with your notification channels (Slack, email, PagerDuty)
+- **Backup:** Implement regular backup strategy for dashboards and configurations
+
+---
+
+## 📚 Additional Resources
+
+- [Prometheus Documentation](https://prometheus.io/docs/)
+- [Grafana Documentation](https://grafana.com/docs/)
+- [kube-prometheus-stack Values](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack)
+- [Best Practices Guide](https://prometheus.io/docs/practices/naming/)
+
+---
+
+**💡 Pro Tip:** This monitoring stack is battle-tested in production environments and provides comprehensive observability for your Kubernetes clusters right out of the box!
